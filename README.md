@@ -18,7 +18,7 @@ different rules. Knowing which layer a file is in tells you whether you may touc
 | Layer           | Files                                                                                                                                                         | Rule                                                                    |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | **Canon**       | `.github/workflows/release.yml`, `.changeset/config.json`                                                                                                     | Copied verbatim. Do not let it diverge — breaking it breaks publishing. |
-| **Scaffolding** | `ci.yml`, `dependabot.yml`, `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.json`, `eslint.config.mjs`, `prettier.config.mjs`, `packages/core` | A working starting point. Delete or rewrite freely.                     |
+| **Scaffolding** | `ci.yml`, `renovate.json5`, `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.json`, `eslint.config.mjs`, `prettier.config.mjs`, `packages/core` | A working starting point. Delete or rewrite freely.                     |
 | **Contract**    | this README                                                                                                                                                   | What an adopting repo must satisfy, **whatever files it has**.          |
 
 Only the canon is standardised. Each repo keeps its own build, lint and tsconfig on
@@ -229,10 +229,24 @@ Under trusted publishing, **provenance is already automatic with no flag.**
 
 ## Why actions are pinned by SHA
 
-A SHA without a bot is not security, it is freezing — and `release.yml` is the file
-you will touch least, so its pins would fossilise hardest. `.github/dependabot.yml`
-rewrites both the hash and the trailing `# vX.Y.Z` comment, monthly and grouped, so
-the pins stay current at one PR a month instead of sixteen.
+A tag is mutable: whoever compromises an action's repository can re-point `v7` and
+walk into your workflows without a line of your code changing. A commit SHA cannot
+be re-pointed.
+
+The cost is that a SHA does not move on its own — and `release.yml` is the file you
+will touch least, so its pins would fossilise hardest. `.github/renovate.json5`
+rewrites both the digest and the trailing `# vX.Y.Z` comment, monthly and grouped,
+so the pins stay current at one PR a month instead of sixteen. It needs the
+[Renovate GitHub App](https://github.com/apps/renovate) installed on the repo.
+
+Renovate is a scaffolding choice, not canon — swap in Dependabot if you prefer, or
+update the pins by hand. **What does not work is keeping the SHA pins with nothing
+to move them**, which is the state you land in by deleting this file and no more.
+
+Pin to **commit** SHAs, not annotated-tag-object SHAs. `gh api .../git/ref/tags/<v>`
+returns the tag object for repositories that sign their tags; use
+`gh api repos/<repo>/commits/<tag>` or `git rev-parse <tag>^{}` instead. Actions
+accepts either, so the mistake is silent.
 
 ## What this template deliberately does not include
 
