@@ -1,0 +1,5 @@
+# The skeleton is a workspace even for a single package. A new lone package is
+# born as a workspace of one: nothing to delete now, no migration the day a
+# second package appears.
+packages:
+  - 'packages/*'
