@@ -33,3 +33,12 @@ updates:
     groups:
       npm:
         patterns: ['*']
+    # Within-range refreshes only, which is the job ticket 11 asked for. A major
+    # rewrites the range rather than refreshing it, and that is a human's call —
+    # the standard demands a floor, not latest. Proven on day one: the first npm
+    # PR proposed TypeScript 7, which typescript-eslint rejects outright
+    # (`does not support TS 7.0`), so CI was red and the PR unmergeable.
+    ignore:
+      - dependency-name: '*'
+        update-types:
+          - version-update:semver-major

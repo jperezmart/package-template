@@ -252,10 +252,14 @@ update the pins by hand. **What does not work is keeping the SHA pins with nothi
 to move them**, which is the state you land in by deleting this file and no more.
 
 It covers two ecosystems: `github-actions` for the SHA pins above, and `npm` so that
-caret ranges actually refresh in the lockfile. **It moves no version field** — not
-`packageManager`, not `engines.node`, not `devEngines` (open Dependabot issues since
-2022, 2023 and 2025 respectively). Node and pnpm are **hand-edited, deliberately**:
-the standard's demand is a floor, not latest.
+caret ranges actually refresh in the lockfile. **Majors are ignored** in the npm
+block: a major rewrites the range rather than refreshing it, and that is a human's
+call. **It moves no version field either** — not `packageManager`, not
+`engines.node`, not `devEngines` (open Dependabot issues since 2022, 2023 and 2025
+respectively). Node and pnpm are **hand-edited, deliberately**.
+
+The through-line: the standard's demand is a **floor, not latest.** The bot's job is
+to stop pins and lockfiles from rotting, not to keep you on the newest of everything.
 
 Pin to **commit** SHAs, not annotated-tag-object SHAs. `gh api .../git/ref/tags/<v>`
 returns the tag object for repositories that sign their tags; use
