@@ -125,10 +125,14 @@ In a repo with no build, `changeset:publish` is `changeset publish` verbatim.
 ### Why `devEngines`, and not `engines`
 
 ```jsonc
+// root package.json — governs development and CI
 "devEngines": {
   "runtime": { "name": "node", "version": "24.20.0", "onFail": "error" }
-},
-"engines": { "node": ">=22.11" }   // a different thing: what you ask of consumers
+}
+
+// each published package — a different thing: what you ask of consumers,
+// and legitimately lower than the Node you develop on
+"engines": { "node": ">=22.11" }
 ```
 
 `setup-node` v6+ resolves `node-version-file: package.json` in this order:
@@ -137,11 +141,16 @@ removes the workflows' only shared hole — the Node version is declared once, i
 `package.json`, and CI, npm and pnpm all honour it. pnpm 11 validates it against
 the running Node and fails with `ERR_PNPM_BAD_RUNTIME_VERSION` per `onFail`.
 
-`engines.node` was rejected for the job even though it is the intuitive pick. It is
-a **range** describing what consumers need, and `setup-node` resolves a range to its
-**floor** — a repo declaring `">=20"` would land on Node 20, whose bundled npm is
-10.x. It also couples two things that must move independently: the Node you develop
-on, and the minimum you impose on consumers.
+`engines.node` was rejected for the job even though it is the intuitive pick, and
+**not for the reason you may have heard**: `setup-node` does _not_ resolve a range to
+its floor. `base-distribution.ts` walks the descending version list with
+`semver.satisfies()`, so a range resolves to the **highest** match. That is precisely
+the problem — `">=24"` would silently carry CI onto Node 25, then 26, the day each
+ships. An exact pin is what makes CI reproducible.
+
+It also couples two things that must move independently: the Node you develop on,
+and the minimum you impose on consumers. Which is why `engines` belongs on each
+**published** package, not on a private workspace root.
 
 **Use Node 24 or later, not 22**, even though `@changesets/cli` v3 permits
 `^22.11`. Node 22 bundles npm 10.x, below the npm ≥ 11.5.1 floor for OIDC. (In a
@@ -242,9 +251,11 @@ Dependabot is a scaffolding choice, not canon — swap in Renovate if you prefer
 update the pins by hand. **What does not work is keeping the SHA pins with nothing
 to move them**, which is the state you land in by deleting this file and no more.
 
-It covers `github-actions` only. **npm dependencies are deliberately not bot-managed**
-— that is a per-repo call, not part of the standard. This file exists to close the
-hole the canon's SHA pinning opens, and nothing more.
+It covers two ecosystems: `github-actions` for the SHA pins above, and `npm` so that
+caret ranges actually refresh in the lockfile. **It moves no version field** — not
+`packageManager`, not `engines.node`, not `devEngines` (open Dependabot issues since
+2022, 2023 and 2025 respectively). Node and pnpm are **hand-edited, deliberately**:
+the standard's demand is a floor, not latest.
 
 Pin to **commit** SHAs, not annotated-tag-object SHAs. `gh api .../git/ref/tags/<v>`
 returns the tag object for repositories that sign their tags; use

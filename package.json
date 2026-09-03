@@ -30,9 +30,6 @@
     "typescript-eslint": "^8.59.2"
   },
   "packageManager": "pnpm@11.25.0",
-  "engines": {
-    "node": ">=22.11"
-  },
   "devEngines": {
     "runtime": {
       "name": "node",

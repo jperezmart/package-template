@@ -17,3 +17,19 @@ updates:
     groups:
       actions:
         patterns: ['*']
+
+  # Required by the caret ranges on the @jperezmart/config packages: without this
+  # block they never refresh in the lockfile.
+  #
+  # Note what it does NOT do: Dependabot moves no version *field* — not
+  # `packageManager`, not `engines.node`, not `devEngines`. Node and pnpm are
+  # hand-edited on purpose. The standard demands a floor, not latest.
+  - package-ecosystem: npm
+    directories:
+      - /
+      - /packages/*
+    schedule:
+      interval: monthly
+    groups:
+      npm:
+        patterns: ['*']
