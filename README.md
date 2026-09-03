@@ -30,6 +30,20 @@ purpose — that is what "scaffolding, not canon" means.
 > read it to find out what `jperezmart/nest-casl` does today; read `nest-casl`.
 > The canon and this contract are the parts that stay true.
 
+### The scaffolding's lint, format and tsconfig come from npm
+
+`eslint.config.mjs`, `prettier.config.mjs` and `tsconfig.json` are three-line
+files that re-export [`jperezmart/config`](https://github.com/jperezmart/config):
+`@jperezmart/eslint-config`, `@jperezmart/prettier-config` and
+`@jperezmart/typescript-config`. That is the one part of the scaffolding which is
+_inherited_ rather than copied, so it does not age with the rest.
+
+**All three are optional.** The standard is about publishing, not about linting —
+nothing in [the contract](#the-contract) mentions them, and deleting all three
+along with their configs breaks nothing. They are separate packages precisely so
+you can take one and not the others; npm dependencies cannot be made optional per
+subpath, so granularity is the opt-in.
+
 ### Why the canon is copied rather than shared
 
 Because npm gives no alternative. A trusted publisher is bound to a workflow
@@ -87,7 +101,7 @@ schema.
 
 ## The contract
 
-Whatever your repo's files look like, it must provide all eight:
+Whatever your repo's files look like, it must provide all nine:
 
 1. **`packageManager: "pnpm@X"`** — pnpm is part of the standard; `release.yml`
    cannot be package-manager agnostic. Must be **≥ 10** (required by
@@ -106,6 +120,12 @@ Whatever your repo's files look like, it must provide all eight:
 7. **Never add `registry-url` to `setup-node`.**
 8. **No install lifecycle scripts** (`preinstall` / `install` / `postinstall`) —
    npm v12 blocks them by default for consumers.
+9. **Your formatter must not touch `.changeset/config.json`.** Hole 3 runs
+   `pnpm format` inside `changeset:version`, so a formatter that reaches that
+   file rewrites the canon on **every version run** — silently, since the result
+   is still valid JSON that changesets accepts. Add it to `.prettierignore`, as
+   this repo does. Found the hard way in `jperezmart/config`, where a
+   `printWidth` of 80 was enough to reflow it.
 
 The two scripts, verbatim:
 
