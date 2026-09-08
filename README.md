@@ -24,6 +24,12 @@ different rules. Knowing which layer a file is in tells you whether you may touc
 Only the canon is standardised. Each repo keeps its own build, lint and tsconfig on
 purpose — that is what "scaffolding, not canon" means.
 
+"Rewrite freely" is about the file, not about every line in it: the contract
+reaches into two scaffolding files and fixes particular keys — `package.json`
+(items 1–4) and `pnpm-workspace.yaml` (item 10). The layer still tells you who
+owns the file; the contract tells you which keys you may not drop while you own
+it.
+
 > [!WARNING]
 > **The scaffolding ages, and it is not a live reference.** It is _copied_, so it
 > starts diverging from the real repos the moment you use it — by design. Do not
@@ -101,7 +107,7 @@ schema.
 
 ## The contract
 
-Whatever your repo's files look like, it must provide all nine:
+Whatever your repo's files look like, it must provide all ten:
 
 1. **`packageManager: "pnpm@X"`** — pnpm is part of the standard; `release.yml`
    cannot be package-manager agnostic. Must be **≥ 10** (required by
@@ -126,6 +132,63 @@ Whatever your repo's files look like, it must provide all nine:
    is still valid JSON that changesets accepts. Add it to `.prettierignore`, as
    this repo does. Found the hard way in `jperezmart/config`, where a
    `printWidth` of 80 was enough to reflow it.
+
+10. **Pin pnpm's supply-chain policy, and exempt what you publish.** In
+    `pnpm-workspace.yaml`, these four keys:
+
+    ```yaml
+    minimumReleaseAge: 1440
+    minimumReleaseAgeStrict: true
+    minimumReleaseAgeExcludePrune: true
+    minimumReleaseAgeExclude:
+      - '@jperezmart/*'
+      - ts-devtools-plugin-radix-themes
+      - tw-preset-radix
+    ```
+
+    The three settings are verbatim; the exclusion list is the one thing that is
+    yours — it names the packages **you** publish, and the entries above are the
+    `jperezmart` ones. Copying them into someone else's repo would exempt this
+    owner's packages and quarantine its own.
+
+    pnpm 11 quarantines any dependency published in the last 24 hours, by
+    default. Nobody chose that — it arrived with the pnpm 9 → 10+ move the canon
+    forced — and left inherited, it shifts under every repo the next time pnpm
+    changes the default. On pnpm 10, which item 1 still permits, there is no such
+    default and this block is what turns the gate **on** rather than what tames
+    it; the name wildcard needs pnpm ≥ 10.17. Pinning it also means a fresh
+    release of your own packages does not redden CI for a day on an otherwise
+    correct change: a package you published yourself through OIDC with provenance
+    is not third-party code. The gate stays fully on for everything else.
+
+    Four things the block does not say for itself:
+
+    - **`minimumReleaseAgeStrict` is written out because declaring the age alone
+      is not a no-op.** Setting `minimumReleaseAge` flips strictness from `false`
+      to `true` on its own. So `1440` by itself already turns pnpm's silent
+      auto-append of an exclusion into a hard failure — and a repo that wrote
+      only that line has taken the flip without knowing. The flag is spelled out
+      so the enforcement change is visible in the file rather than implied by it.
+    - **The two unscoped names are not redundant.** The rule is _exclude what you
+      publish_, not _exclude your scope_: `'@jperezmart/*'` covers seven of the
+      nine published packages and misses `tw-preset-radix` and
+      `ts-devtools-plugin-radix-themes` entirely, because they are unscoped.
+    - **The `/` before the `*` is load-bearing.** pnpm expands `*` to `.*`, so
+      `'@jperezmart/*'` pins the match to that exact scope; a lookalike
+      `@jperezmart-evil/...` does not match and stays quarantined.
+    - **`minimumReleaseAgeExcludePrune` keeps the list from rotting.** The
+      exclusions pnpm writes for itself are exact `name@version` pairs, which are
+      stale the moment the version moves; prune drops them once they age out. It
+      never touches a name pattern, so the three entries above are permanent and
+      only auto-written debt is collected.
+
+    This item reaches into a scaffolding file, which looks like a break from
+    "whatever your repo's files look like" and is not one — items 1–4 do the same
+    to `package.json`. What is new is that a lone package would otherwise have no
+    `pnpm-workspace.yaml` at all: pnpm 11 reads these settings from that file and
+    nowhere else, not from `.npmrc`, which the standard removed, and not from
+    `package.json`. That is the same constraint `allowBuilds` already imposes on
+    `tw-preset-radix`, a repo with no `packages:` key and no workspace.
 
 The two scripts, verbatim:
 
@@ -297,3 +360,9 @@ accepts either, so the mistake is silent.
 - **No skills.** A skill shipped in the template is copied content, and adopting
   repos would be copies diverging in parallel.
 - **No shared/reusable workflows.** See [Why the canon is copied](#why-the-canon-is-copied-rather-than-shared).
+- **No `minimumReleaseAge: 0`, and no `trustLockfile: true`.** The two ways to
+  make [contract item 10](#the-contract) stop failing without addressing why it failed.
+  The first switches the supply-chain gate off outright; the second skips the
+  verification pass, and was added for CI running out of memory on very large
+  lockfiles, not for ergonomics. Neither is what a fresh dependency is asking
+  for — waiting a day, or excluding a package you publish yourself, is.
