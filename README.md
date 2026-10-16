@@ -277,8 +277,20 @@ irreversible failure is someone else taking the name.
    The custom dist-tag is the point: `latest` is never created, so an install during
    the window fails loudly rather than silently pulling an empty package.
 
-2. **Configure the trusted publisher** on npmjs.com — manual, interactive 2FA,
-   pointing at this repo's `release.yml`.
+2. **Configure the trusted publisher**, pointing at this repo's `release.yml`. From
+   a terminal logged in to npm (npm ≥ 11.15, 2FA on the account), one command per
+   package, each with its own 2FA prompt:
+
+   ```sh
+   npm trust github @scope/name --repo owner/repo --file release.yml --allow-publish -y
+   ```
+
+   npm keeps one configuration per package and cannot edit it, so when the repo
+   is renamed or moved, replace it: `npm trust list @scope/name` for its id,
+   `npm trust revoke @scope/name --id=<id>`, then the command above. The same
+   form exists on npmjs.com (package → Settings → Trusted Publisher), one 2FA
+   per write.
+
 3. **Verify** that a real publish goes out through OIDC and carries an attestation.
 4. **Tighten**: set the package's Publishing access to _"Require two-factor
    authentication and disallow tokens"_. **After step 3, never before** — with OIDC
